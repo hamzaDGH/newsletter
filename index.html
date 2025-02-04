@@ -213,6 +213,11 @@
 
             <h2>Die besten lokalen Rabatte täglich in deiner Inbox!</h2>
 
+            <div class="social-proof">
+                <i class="fas fa-users"></i>
+                <span>Bereits 6 Abonnenten!</span>
+            </div>
+
             <form id="subscribeForm" class="subscribe-form"
                 action="https://script.google.com/macros/s/AKfycbylXbOxpGerDNpZNQkuG2XM9aqFE1xoHxP-DstdhlJqHMoBThhmo0U1y8GrYk-96X5R/exec"
                 method="POST">
@@ -259,96 +264,128 @@
     </footer>
 
     <script>
-        // 1) Check localStorage for an existing deadline
-        let deadlineStr = localStorage.getItem('newsletterDeadline');
-        let deadline;
-
-        if (deadlineStr) {
-            // If found, parse it back to a Date
-            deadline = new Date(deadlineStr);
-        } else {
-            // If not found, set a new deadline (3 days from now)
-            const now = new Date();
-            now.setDate(now.getDate() + 3);
-            deadline = now;
-            // Store it in localStorage for future visits
-            localStorage.setItem('newsletterDeadline', deadline);
-        }
-
-        // Countdown Timer Function
+        /*******************************************************
+         * 1) SIMPLE DATE CALCULATION (NO Local Storage)
+         *    Start:  2025-02-04
+         *    End:    2025-02-09  (5 full days later)
+         *******************************************************/
+        const startDate = new Date("2025-02-04T00:00:00");
+        const endDate   = new Date("2025-02-09T00:00:00");
+    
         function updateTimer() {
-            const now = new Date().getTime();
-            const diff = deadline.getTime() - now;
-
-            if (diff <= 0) {
-                document.querySelector('.countdown-heading').innerHTML = "🎉 Jetzt verfügbar!";
-                return;
-            }
-
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-            document.getElementById('days').textContent = days;
-            document.getElementById('hours').textContent = String(hours).padStart(2, '0');
-            document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+          const now = new Date();
+          const diff = endDate - now;
+    
+          // If it's past the end date, show "Jetzt verfügbar!"
+          if (diff <= 0) {
+            document.querySelector(".countdown-heading").innerHTML = "🎉 Jetzt verfügbar!";
+            return;
+          }
+    
+          // Calculate days, hours, minutes (ignore seconds for brevity)
+          const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+          const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+          // Update the HTML
+          document.getElementById("days").textContent    = days;
+          document.getElementById("hours").textContent   = String(hours).padStart(2, "0");
+          document.getElementById("minutes").textContent = String(minutes).padStart(2, "0");
         }
-
-        // Update the timer every second
+    
+        // Run every second to keep the countdown fresh
         setInterval(updateTimer, 1000);
-        // Initialize immediately
         updateTimer();
-
-
-        // --- Form + Consent + Spinner (same as your original code) ---
-        const subscribeForm = document.getElementById('subscribeForm');
-        const consentCheckbox = document.getElementById('consent');
-        const submitButton = subscribeForm.querySelector('button[type="submit"]');
-        const spinner = document.getElementById('spinner');
-        const successMessage = document.querySelector('.success-message');
-        const errorMessage = document.querySelector('.error-message');
-
-        // Disable/Enable button based on checkbox
-        consentCheckbox.addEventListener('change', () => {
-            submitButton.disabled = !consentCheckbox.checked;
+    
+    
+        /*******************************************************
+         * 2) DAILY LOGIC FOR "SOCIAL PROOF" (Abonnenten)
+         *    We show different numbers each day from Feb 4 to 9.
+         *******************************************************/
+        const dailySubscriberCounts = [
+          6, // Day 0 (Feb 4)
+          28,  // Day 1 (Feb 5)
+          45,  // Day 2 (Feb 6)
+          70,  // Day 3 (Feb 7)
+          105, // Day 4 (Feb 8)
+          150  // Day 5 (Feb 9) or later
+        ];
+    
+        function updateSocialProof() {
+          const now = new Date();
+          // Days passed since startDate (2025-02-04)
+          const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+    
+          // If daysSinceStart is negative (before Feb 4), just use index 0
+          let index = daysSinceStart >= 0 ? daysSinceStart : 0;
+    
+          // If index is beyond last, clamp to last value
+          if (index >= dailySubscriberCounts.length) {
+            index = dailySubscriberCounts.length - 1;
+          }
+    
+          // Get the corresponding subscriber count
+          const subscriberCount = dailySubscriberCounts[index];
+          document.getElementById("subscriberCount").textContent = 
+            "Bereits " + subscriberCount + " Abonnenten!";
+        }
+    
+        // Update once on page load; 
+        // you could also run a timer if you want it to “tick” each day without reload
+        updateSocialProof();
+    
+    
+        /*******************************************************
+         * 3) FORM SUBMISSION LOGIC & SPINNER
+         *******************************************************/
+        const subscribeForm   = document.getElementById("subscribeForm");
+        const consentCheckbox = document.getElementById("consent");
+        const submitButton    = subscribeForm.querySelector('button[type="submit"]');
+        const spinner         = document.getElementById("spinner");
+        const successMessage  = document.querySelector(".success-message");
+        const errorMessage    = document.querySelector(".error-message");
+    
+        // Enable / Disable submit button based on checkbox
+        consentCheckbox.addEventListener("change", () => {
+          submitButton.disabled = !consentCheckbox.checked;
         });
-
-        // Form Handling with Fetch
-        subscribeForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-
-            successMessage.style.display = 'none';
-            errorMessage.style.display = 'none';
-            spinner.style.display = 'inline-block';
-
-            try {
-                const email = subscribeForm.querySelector('input[name="email"]').value;
-                const data = new URLSearchParams();
-                data.append('email', email);
-
-                const response = await fetch(subscribeForm.action, {
-                    method: 'POST',
-                    body: data,
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded'
-                    }
-                });
-
-                spinner.style.display = 'none';
-
-                if (response.ok) {
-                    successMessage.style.display = 'block';
-                    subscribeForm.reset();
-                    submitButton.disabled = true;
-                } else {
-                    errorMessage.style.display = 'block';
-                }
-            } catch (error) {
-                spinner.style.display = 'none';
-                errorMessage.style.display = 'block';
+    
+        // Handle Form Submission
+        subscribeForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+    
+          successMessage.style.display = "none";
+          errorMessage.style.display   = "none";
+          spinner.style.display        = "inline-block";
+    
+          try {
+            const email = subscribeForm.querySelector('input[name="email"]').value;
+            const data  = new URLSearchParams();
+            data.append("email", email);
+    
+            const response = await fetch(subscribeForm.action, {
+              method: "POST",
+              body: data,
+              headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+            });
+    
+            spinner.style.display = "none";
+    
+            if (response.ok) {
+              successMessage.style.display = "block";
+              subscribeForm.reset();
+              submitButton.disabled = true; // re-disable if you want
+            } else {
+              errorMessage.style.display = "block";
             }
+          } catch (error) {
+            spinner.style.display = "none";
+            errorMessage.style.display = "block";
+          }
         });
-    </script>
+      </script>
 </body>
 
 </html>
